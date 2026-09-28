@@ -1,8 +1,8 @@
-# Apparate
+# Relay
 
-Apparate is an automated utility to synchronize your accepted HackerRank solutions directly to a designated GitHub repository.
+Relay is an automated utility to synchronize your accepted HackerRank solutions directly to a designated GitHub repository.
 
-This project is a modernized fork of the original Apparate utility by [Sanket Gautam](https://github.com/sanketgautam/Apparate), updated with native API requests, secure state management, and a clean desktop interface.
+Built on the original idea by [Sanket Gautam](https://github.com/sanketgautam/Apparate), with native API requests, secure state management, and a clean desktop interface.
 
 ---
 
@@ -18,17 +18,17 @@ This project is a modernized fork of the original Apparate utility by [Sanket Ga
 
 ## Desktop GUI
 
-Apparate includes a native desktop application with a neutral dark interface and Inter typography.
+Relay includes a native desktop application with a neutral dark interface and Inter typography.
 
 ### Running from Source
 ```bash
-python apparate_gui.py
+python relay_gui.py
 ```
 
 ### Running the Standalone Executable
 You can run the pre-built executable directly:
 ```
-dist/Apparate.exe
+dist/Relay.exe
 ```
 
 ### Building the Executable
@@ -36,7 +36,7 @@ To rebuild the standalone Windows binary, run the automated build script:
 ```bash
 python build.py
 ```
-The script automatically handles packaging, cleans previous build artifacts, and outputs a lightweight `dist/Apparate.exe`.
+The script automatically handles packaging, cleans previous build artifacts, and outputs a lightweight `dist/Relay.exe`.
 
 ---
 
@@ -54,14 +54,14 @@ so the two tools can share the same repository.
 
 ## Command Line Interface (CLI)
 
-Apparate can also be executed directly via terminal or scheduled via cron.
+Relay can also be executed directly via terminal or scheduled via cron.
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Horrid-12/Apparate.git
-   cd Apparate
+   git clone https://github.com/Horrid-12/Relay.git
+   cd Relay
    ```
 
 2. Install dependencies:
@@ -71,7 +71,7 @@ Apparate can also be executed directly via terminal or scheduled via cron.
 
 ### Usage
 ```bash
-python -m scripts.apparate --repo <Submissions_Repo_Name> --user <HackerRank_Username> --cookie <HackerRank_Cookie> --token <GitHub_Token>
+python -m scripts.relay --repo <Submissions_Repo_Name> --user <HackerRank_Username> --cookie <HackerRank_Cookie> --token <GitHub_Token>
 ```
 
 ### Options
@@ -88,7 +88,7 @@ Options:
 
 ## HackerRank Cookie Authentication
 
-To bypass aggressive bot detection (Cloudflare) and parental controls that block headless browsers, Apparate now uses direct HTTP REST API calls using your HackerRank session cookie.
+To bypass aggressive bot detection (Cloudflare) and parental controls that block headless browsers, Relay uses direct HTTP REST API calls using your HackerRank session cookie.
 
 To get your cookie:
 1. Log into HackerRank in your normal browser (Edge, Chrome, or Firefox).
@@ -96,13 +96,13 @@ To get your cookie:
 3. Go to the **Application** (Chrome/Edge) or **Storage** (Firefox) tab.
 4. Expand **Cookies** on the left sidebar and select `https://www.hackerrank.com`.
 5. Find the cookie named `_hrank_session`.
-6. Copy its **Value** and paste it into Apparate.
+6. Copy its **Value** and paste it into Relay.
 
 ---
 
 ## GitHub Access Token Setup
 
-To allow Apparate to create and update your solutions repository:
+To allow Relay to create and update your solutions repository:
 1. Go to **GitHub Settings** -> **Developer Settings** -> **Personal Access Tokens** -> **Tokens (classic)**.
 2. Generate a new token with the `repo` scope.
 3. Use this token in the GUI or pass it to the `--token` CLI argument.
@@ -111,9 +111,9 @@ To allow Apparate to create and update your solutions repository:
 
 ## Architecture Overview
 
-- **`scripts/apparate.py`**: Core orchestrator managing GitHub API operations, repository creation, commit workflows, and submission state tracking (`submissions.json`).
+- **`scripts/relay.py`**: Core orchestrator managing GitHub API operations, repository creation, commit workflows, and submission state tracking (`submissions.json`).
 - **`scripts/spider.py`**: Extremely fast REST API automation layer that traverses HackerRank submissions, fetches JSON endpoints, and extracts actual code submissions locally.
-- **`apparate_gui.py`**: Native desktop GUI built with Tkinter, featuring live log streaming and credential caching.
+- **`relay_gui.py`**: Native desktop GUI built with Tkinter, featuring live log streaming and credential caching.
 - **`build.py`**: Automated PyInstaller packaging pipeline.
 
 ---
@@ -121,7 +121,7 @@ To allow Apparate to create and update your solutions repository:
 ## Credits and Acknowledgments
 
 - Original concept and implementation by **[Sanket Gautam](https://github.com/sanketgautam)**: [sanketgautam/Apparate](https://github.com/sanketgautam/Apparate)
-- Modernized and maintained by **[Horrid-12](https://github.com/Horrid-12/Apparate)**
+- Maintained by **[Horrid-12](https://github.com/Horrid-12/Relay)**
 
 ---
 

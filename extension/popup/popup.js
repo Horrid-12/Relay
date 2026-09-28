@@ -44,7 +44,7 @@ function loadSettings(cb) {
 
 syncBtn.addEventListener("click", () => {
   saveSettings();
-  const port = api.runtime.connect({ name: "apparate-sync" });
+  const port = api.runtime.connect({ name: "relay-sync" });
   setBusy(true);
   clearLog();
   appendLog("Starting sync...");
@@ -71,7 +71,7 @@ syncBtn.addEventListener("click", () => {
 
 tokenBtn.addEventListener("click", () => {
   api.tabs.create({
-    url: "https://github.com/settings/tokens/new?description=Apparate+HackerRank+Sync&scopes=repo"
+    url: "https://github.com/settings/tokens/new?description=Relay+HackerRank+Sync&scopes=repo"
   });
 });
 

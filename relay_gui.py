@@ -1,5 +1,5 @@
 """
-Apparate Desktop GUI
+Relay Desktop GUI
 A native Windows application to sync HackerRank submissions to GitHub.
 Built with tkinter — compiles to a standalone .exe via PyInstaller.
 """
@@ -57,11 +57,11 @@ BORDER       = "#3a3a3a"
 FONT_FAMILY  = "Inter"
 
 
-class ApparateGUI:
+class RelayGUI:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Apparate v0.2")
+        self.root.title("Relay v0.2")
         self.root.configure(bg=BG)
         self.root.resizable(False, False)
 
@@ -92,7 +92,7 @@ class ApparateGUI:
         title_frame.pack(fill="x", padx=pad, pady=(pad, 4))
 
         tk.Label(
-            title_frame, text="Apparate", font=(FONT_FAMILY, 15, "bold"),
+            title_frame, text="Relay", font=(FONT_FAMILY, 15, "bold"),
             bg=BG, fg=FG
         ).pack(side="left")
 
@@ -219,13 +219,13 @@ class ApparateGUI:
 
     def _open_github_token_page(self):
         """Opens GitHub settings page to generate a token with 'repo' scope."""
-        token_url = "https://github.com/settings/tokens/new?description=Apparate+HackerRank+Sync&scopes=repo"
+        token_url = "https://github.com/settings/tokens/new?description=Relay+HackerRank+Sync&scopes=repo"
         webbrowser.open(token_url)
         self._log("Opened GitHub in browser.")
         self._log("Generate the token with 'repo' scope and paste it into Access Token.")
 
     def _get_config_path(self):
-        config_dir = pathlib.Path.home() / ".apparate"
+        config_dir = pathlib.Path.home() / ".relay"
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir / "config.json"
 
@@ -269,7 +269,7 @@ class ApparateGUI:
 
     def open_cookie_help(self):
         from tkinter import messagebox
-        msg = "To bypass Cloudflare & Microsoft Family Safety, Apparate now uses your session cookie directly.\n\n" \
+        msg = "To bypass Cloudflare & Microsoft Family Safety, Relay now uses your session cookie directly.\n\n" \
               "1. Log into HackerRank in your normal browser (Edge/Chrome).\n" \
               "2. Press F12 to open Developer Tools.\n" \
               "3. Go to Application (Chrome) or Storage (Firefox) tab.\n" \
@@ -321,24 +321,24 @@ class ApparateGUI:
         thread.start()
 
     def _run_sync(self, user, passwd, token, repo, browser_mode=False, browser_choice="Firefox / Floorp"):
-        """Run Apparate sync in a background thread."""
+        """Run Relay sync in a background thread."""
         old_stdout = sys.stdout
         sys.stdout = _LogWriter(self.log_queue)
 
         try:
-            import scripts.apparate as apparate_module
-            apparate_module.submissions_repo = repo
-            apparate_module.hackerrank_username = user
-            apparate_module.hackerrank_cookie = passwd
-            apparate_module.github_token = token
-            apparate_module.browser_login_mode = browser_mode
-            apparate_module.browser_name_choice = browser_choice
+            import scripts.relay as relay_module
+            relay_module.submissions_repo = repo
+            relay_module.hackerrank_username = user
+            relay_module.hackerrank_cookie = passwd
+            relay_module.github_token = token
+            relay_module.browser_login_mode = browser_mode
+            relay_module.browser_name_choice = browser_choice
 
             from datetime import datetime
             start = datetime.now()
             self.log_queue.put(start.strftime("Executing on %a, %d %b %Y, %H:%M:%S"))
 
-            app = apparate_module.Apparate()
+            app = relay_module.Relay()
             new_subs, codes = app.check_updates()
 
             if new_subs is not None:
@@ -413,5 +413,5 @@ class _LogWriter(io.TextIOBase):
 
 
 if __name__ == "__main__":
-    gui = ApparateGUI()
+    gui = RelayGUI()
     gui.run()

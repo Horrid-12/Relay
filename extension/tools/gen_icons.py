@@ -17,7 +17,7 @@ def png(size, pixels):
             rows += bytes(pixels(x, y, size))
     return sig + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b"")
 
-def apparate_logo(x, y, size):
+def relay_logo(x, y, size):
     bg = (30, 30, 30)
     fg = (88, 166, 255)
     inner = (30, 30, 30)
@@ -35,7 +35,7 @@ def main():
     out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "icons")
     os.makedirs(out_dir, exist_ok=True)
     for size in (16, 32, 48, 128):
-        data = png(size, apparate_logo)
+        data = png(size, relay_logo)
         path = os.path.join(out_dir, f"icon{size}.png")
         with open(path, "wb") as f:
             f.write(data)

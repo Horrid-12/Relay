@@ -8,7 +8,7 @@ import requests
 import urllib.parse
 from bs4 import BeautifulSoup
 
-logger = logging.getLogger("Apparate.Spider")
+logger = logging.getLogger("Relay.Spider")
 
 class Spider:
     def __init__(self, username, cookie, browser_login=False, browser_name=None):

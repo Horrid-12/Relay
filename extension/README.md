@@ -1,6 +1,6 @@
-# Apparate Browser Extension (Firefox + Chrome)
+# Relay Browser Extension (Firefox + Chrome)
 
-A WebExtension port of the Apparate desktop app. Syncs your accepted
+A WebExtension port of the Relay desktop app. Syncs your accepted
 HackerRank submissions to a GitHub repository directly from your browser.
 
 Instead of copying your `_hrank_session` cookie by hand, the extension reads
@@ -23,7 +23,7 @@ service worker.
 
 1. Open `about:debugging#/runtime/this-firefox`
 2. Click **Load Temporary Add-on…**
-3. Browse to `dist/apparate-<version>.zip` (or the `.xpi`) — you do **not**
+3. Browse to `dist/relay-<version>.zip` (or the `.xpi`) — you do **not**
    have to select the source folder each time.
 
 ### Chrome / Edge
@@ -40,7 +40,7 @@ service worker.
 ## Usage
 
 1. Log in to HackerRank in a normal tab.
-2. Click the **Apparate** toolbar icon.
+2. Click the **Relay** toolbar icon.
 3. Paste your GitHub token and desired repository name.
 4. Leave the session cookie field empty to auto-read it, then click **Sync Submissions**.
 
@@ -64,8 +64,8 @@ The extension will:
 
 Run `tools/package.ps1` to produce ready-to-load archives in `dist/`:
 
-- `apparate-<version>.zip` — Chrome/Edge (unzip, then **Load unpacked**) and Firefox (**Load Temporary Add-on…**)
-- `apparate-<version>.xpi` — Firefox alias of the same zip
+- `relay-<version>.zip` — Chrome/Edge (unzip, then **Load unpacked**) and Firefox (**Load Temporary Add-on…**)
+- `relay-<version>.xpi` — Firefox alias of the same zip
 
 ## Layout
 
@@ -75,6 +75,6 @@ background.js        sync engine: HackerRank spider + GitHub push
 popup/               toolbar popup UI
 icons/               generated toolbar icons
 tools/gen_icons.py   toolbar icon generator
-tools/package.ps1    packaging script -> dist/apparate-<version>.zip/.xpi
+tools/package.ps1    packaging script -> dist/relay-<version>.zip/.xpi
 tools/selftest.js    headless logic self-test (node tools/selftest.js)
 ```

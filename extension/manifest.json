@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Apparate",
+  "name": "Relay",
   "version": "0.4.0",
   "description": "Sync your accepted HackerRank submissions directly to a GitHub repository.",
   "permissions": ["cookies", "storage"],
@@ -14,7 +14,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "Apparate",
+    "default_title": "Relay",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -30,7 +30,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "apparate@horrid-12.local",
+      "id": "relay@horrid-12.local",
       "strict_min_version": "109.0"
     }
   }

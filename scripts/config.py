@@ -10,7 +10,7 @@ dir_path = os.path.join(home, '.logs')
 if not os.path.exists(dir_path):
     os.makedirs(dir_path)
 
-logging.basicConfig(filename=dir_path + "/apparate.log",
+logging.basicConfig(filename=dir_path + "/relay.log",
                     format='%(asctime)s %(message)s',
                     filemode='a')
 

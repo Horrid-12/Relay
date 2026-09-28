@@ -5,13 +5,13 @@ import shutil
 import time
 
 def build():
-    print("=== Apparate PyInstaller Builder ===")
+    print("=== Relay PyInstaller Builder ===")
     
-    # 1. Kill any running Apparate processes
+    # 1. Kill any running Relay processes
     if sys.platform == "win32":
-        print("Checking and stopping any running Apparate.exe instances...")
+        print("Checking and stopping any running Relay.exe instances...")
         try:
-            subprocess.run(["taskkill", "/F", "/IM", "Apparate.exe"], capture_output=True)
+            subprocess.run(["taskkill", "/F", "/IM", "Relay.exe"], capture_output=True)
             time.sleep(1)
         except Exception:
             pass
@@ -31,17 +31,17 @@ def build():
         "--onefile",
         "--noconsole",
         "--clean",
-        "--name", "Apparate",
+        "--name", "Relay",
         "--add-data", f"fonts{os.pathsep}fonts",
-        "apparate_gui.py"
+        "relay_gui.py"
     ]
     print(f"Running: {' '.join(cmd)}")
     result = subprocess.run(cmd)
 
     if result.returncode == 0:
-        exe_path = os.path.abspath(os.path.join("dist", "Apparate.exe"))
+        exe_path = os.path.abspath(os.path.join("dist", "Relay.exe"))
         print("\n==========================================")
-        print(f"SUCCESS: Apparate built cleanly at:\n{exe_path}")
+        print(f"SUCCESS: Relay built cleanly at:\n{exe_path}")
         print("==========================================")
     else:
         print(f"\nBuild failed with return code {result.returncode}")

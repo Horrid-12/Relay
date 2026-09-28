@@ -30,5 +30,5 @@ Analysis.md
 credentials.py
 *.log
 geckodriver.log
-apparate.log
+relay.log
 .logs/

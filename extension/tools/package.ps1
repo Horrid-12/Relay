@@ -27,7 +27,7 @@ foreach ($rel in $entries) {
   $payload[$rel] = [IO.File]::ReadAllBytes($path)
 }
 
-function New-ApparateZip {
+function New-RelayZip {
   param([string]$ZipPath)
 
   if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
@@ -44,9 +44,9 @@ function New-ApparateZip {
   } finally { $archive.Dispose() }
 }
 
-$zip = Join-Path $dist "apparate-$version.zip"
-New-ApparateZip -ZipPath $zip
-$xpi = Join-Path $dist "apparate-$version.xpi"
+$zip = Join-Path $dist "relay-$version.zip"
+New-RelayZip -ZipPath $zip
+$xpi = Join-Path $dist "relay-$version.xpi"
 Copy-Item $zip $xpi -Force
 
 Write-Host "Packaged $zip"

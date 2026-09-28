@@ -8,7 +8,7 @@ import click
 import sys
 
 
-class Apparate:
+class Relay:
 
     def __init__(self):
         self.submissions = []
@@ -20,9 +20,9 @@ class Apparate:
             try:
                 from github import Auth
                 auth = Auth.Token(token)
-                g = Github(auth=auth, timeout=30, retry=3, user_agent="Apparate-Sync")
+                g = Github(auth=auth, timeout=30, retry=3, user_agent="Relay-Sync")
             except Exception:
-                g = Github(token, timeout=30, retry=3, user_agent="Apparate-Sync")
+                g = Github(token, timeout=30, retry=3, user_agent="Relay-Sync")
 
             user = g.get_user()
             login_name = user.login
@@ -255,7 +255,7 @@ class Apparate:
 @click.option("--user", prompt=True, help="Username of your HackerRank account")
 @click.option("--cookie", prompt=True, hide_input=True, help="Session Cookie (_hrank_session) of your HackerRank account")
 @click.option("--token", prompt=True, help="GitHub Personal Access Token with 'repo' scope")
-def apparate(repo, user, cookie, token):
+def relay(repo, user, cookie, token):
     """ Tool to Synchronize HackerRank Submissions with GitHub """
     global submissions_repo, hackerrank_username, hackerrank_cookie, github_token
     submissions_repo = repo
@@ -264,11 +264,11 @@ def apparate(repo, user, cookie, token):
     github_token = token
 
     startTime = datetime.now()
-    logger.debug(startTime.strftime("Executing Apparate on %a, %d %b %Y, %H:%M:%S"))
-    print(startTime.strftime("Executing Apparate on %a, %d %b %Y, %H:%M:%S"))
+    logger.debug(startTime.strftime("Executing Relay on %a, %d %b %Y, %H:%M:%S"))
+    print(startTime.strftime("Executing Relay on %a, %d %b %Y, %H:%M:%S"))
 
     try:
-        app = Apparate()
+        app = Relay()
         new_submissions, codes = app.check_updates()
 
         if new_submissions is not None:
@@ -279,18 +279,18 @@ def apparate(repo, user, cookie, token):
             print("No new submissions found! Nothing to update.")
 
     except Exception as e:
-        logger.error("[FATAL Error] Unable to Apparate")
+        logger.error("[FATAL Error] Unable to relay submissions")
         logger.exception(e)
-        print("[FATAL Error] Unable to Apparate", e)
+        print("[FATAL Error] Unable to relay submissions", e)
         exit(1)
 
     finally:
         diff = (datetime.now() - startTime).seconds
         minutes = diff // 60
         seconds = diff - minutes * 60
-        logger.debug(f"Time taken to Apparate is {minutes} min(s), {seconds} sec(s)")
-        print(f"Time taken to Apparate is {minutes} min(s), {seconds} sec(s)")
+        logger.debug(f"Time taken to relay is {minutes} min(s), {seconds} sec(s)")
+        print(f"Time taken to relay is {minutes} min(s), {seconds} sec(s)")
 
 
 if __name__ == "__main__":
-    apparate()
+    relay()
