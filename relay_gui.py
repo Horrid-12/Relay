@@ -342,8 +342,11 @@ class RelayGUI:
             new_subs, codes = app.check_updates()
 
             if new_subs is not None:
-                app.update_repo(new_subs, codes)
-                app.update_submissions(new_subs)
+                committed = app.update_repo(new_subs, codes)
+                if committed:
+                    app.update_submissions(committed)
+                else:
+                    self.log_queue.put("No submissions could be committed this run. State file left unchanged.")
             else:
                 self.log_queue.put("No new submissions found.")
 

@@ -123,10 +123,11 @@ function findCode(node) {
   return null;
 }
 
+// Returns the source code, or null when HackerRank will not give it up.
+// Never return a placeholder: a placeholder written to the repo reads as a
+// real solution, and because it lands in the state file the cursor moves past
+// it so it is never retried. Callers treat null as "skip, try again later".
 async function fetchCode(cookie, submission, log) {
-  const FALLBACK = "// Could not fetch code snippet";
-
-  // If code was already captured from the submissions list API, use it
   if (submission.code && submission.code.trim().length > 5) {
     return submission.code;
   }
@@ -173,7 +174,8 @@ async function fetchCode(cookie, submission, log) {
     }
   } catch (e) { /* network error, fall through */ }
 
-  return FALLBACK;
+  log(`Could not retrieve code for '${submission.title}' (${submission.id}) - skipping, will retry next sync.`);
+  return null;
 }
 
 function extensionFor(language) {
@@ -511,25 +513,52 @@ async function runSync(config, log) {
   }
 
   log(`Fetching source code for ${newSubs.length} submission(s)...`);
-  const codes = [];
+  const fetched = [];
   for (let i = 0; i < newSubs.length; i++) {
     const submission = newSubs[i];
     log(` - fetching code for submission ${i + 1}. ${submission.title}`);
-    codes.push(await fetchCode(cookieValue, submission, log));
+    fetched.push({ submission, code: await fetchCode(cookieValue, submission, log) });
     await sleep(400);
   }
 
-  log(`Updating repo for ${newSubs.length} new submission(s)...`);
-  for (let i = 0; i < newSubs.length; i++) {
-    const submission = newSubs[i];
-    log(` - updating repo with submission ${i + 1}. ${submission.title}`);
-    await uploadSubmission(token, login, repo, submission, codes[i], login, log);
+  // Only submissions whose source we actually retrieved get committed and
+  // recorded. Anything else is left out of the state file on purpose: the
+  // cursor is state[0], so a submission that is never recorded stays *ahead* of
+  // the cursor and the next sync naturally re-fetches it.
+  //
+  // Note we commit every success, even one that sits below a failure. Stopping
+  // at the first failure instead would look tidier but loses data: fetchSubmissions()
+  // halts at the first state entry, so anything older than the newest commit is
+  // unreachable regardless. For [C ok, B fails, A ok], committing only the
+  // prefix [C] strands B *and* A, whereas committing [C, A] salvages A. A
+  // submission that is both older than the cursor and failed is lost in either
+  // strategy; that is a limitation of the single-cursor state format, not
+  // something this loop can fix.
+  const committed = fetched.filter((f) => f.code !== null);
+  const skipped = fetched.filter((f) => f.code === null);
+
+  for (const f of skipped) {
+    log(` -- SKIPPED '${f.submission.title}': source unavailable, no file written, will retry next sync.`);
   }
 
-  const stateEntries = newSubs.map((s) => [s.title, s.language, s.problem, s.status, s.link]);
-  const mergedState = stateEntries.concat(saved);
-  await saveState(token, login, repo.trim(), mergedState, log);
-  await saveReadme(token, login, repo.trim(), mergedState, log);
+  if (committed.length) {
+    log(`Updating repo for ${committed.length} new submission(s)...`);
+    for (let i = 0; i < committed.length; i++) {
+      const { submission, code } = committed[i];
+      log(` - updating repo with submission ${i + 1}. ${submission.title}`);
+      await uploadSubmission(token, login, repo, submission, code, login, log);
+    }
+
+    const stateEntries = committed.map(
+      (f) => [f.submission.title, f.submission.language, f.submission.problem, f.submission.status, f.submission.link]
+    );
+    const mergedState = stateEntries.concat(saved);
+    await saveState(token, login, repo.trim(), mergedState, log);
+    await saveReadme(token, login, repo.trim(), mergedState, log);
+  } else {
+    log("No submissions could be retrieved this run - state file left unchanged.");
+    await saveReadme(token, login, repo.trim(), saved, log);
+  }
 }
 
 api.runtime.onConnect.addListener((port) => {

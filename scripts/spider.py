@@ -97,7 +97,7 @@ class Spider:
                     full_url = "/" + full_url
                 full_url = "https://www.hackerrank.com" + full_url
                 
-            code = "// Could not fetch code snippet"
+            code = None
             try:
                 resp = self.session.get(full_url)
                 if resp.ok:
@@ -108,7 +108,7 @@ class Spider:
                             # It's URL encoded JSON
                             raw_json = urllib.parse.unquote(m.group(1))
                             j = json.loads(raw_json)
-                            
+
                             # Find code deep inside the json tree with stronger heuristics
                             found = False
                             def find_code(d):
@@ -143,12 +143,12 @@ class Spider:
                             find_code(j)
                         except Exception as parse_e:
                             logger.error(f"Failed to parse initialData: {parse_e}")
-                            
+
                 # Note: The REST API fallback (GET /submissions/id) returns 405 Method Not Allowed,
                 # so we rely entirely on the initialData JSON parsing above.
-                
+
                 # REST API fallback: try fetching code directly from the submissions API
-                if code == "// Could not fetch code snippet":
+                if code is None:
                     try:
                         # Extract submission ID from the link
                         sub_id_match = re.search(r'/code/(\d+)', link)
@@ -165,13 +165,18 @@ class Spider:
                                     logger.info(f"  Got code via REST API fallback for '{title}'")
                     except Exception as api_e:
                         logger.warning(f"REST API fallback also failed for '{title}': {api_e}")
-                        
-                if code == "// Could not fetch code snippet":
-                    logger.warning(f"Could not extract code for '{title}' from any source")
-                    
+
+                if code is None:
+                    # Never substitute a placeholder here: it would be committed as
+                    # if it were a real solution, and recording it in the state file
+                    # moves the sync cursor past it so it is never retried. None
+                    # tells the caller to skip the file and try again next sync.
+                    logger.warning(f"Could not extract code for '{title}' - skipping")
+                    print(f"   [skip] no source available for '{title}' - will retry next sync")
+
             except Exception as e:
                 print(f"Error fetching {title}: {e}")
-                
+
             codes[submission] = code
             time.sleep(1)
             

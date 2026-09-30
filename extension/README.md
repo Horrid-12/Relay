@@ -56,6 +56,23 @@ The extension will:
   README is fully overwritten, so treat it as generated output — any
   manual edits are reverted on the next sync.
 
+### When HackerRank will not return the source
+
+Occasionally HackerRank declines to hand back the code for a submission. The
+extension then **skips that submission entirely**: no file is written, and no
+entry is added to `submissions.json`. It is reported as `SKIPPED` in the log.
+
+This is deliberate, and it is what makes the sync self-healing. The cursor is
+the newest entry in `submissions.json`, so a submission that is never recorded
+stays permanently *ahead* of the cursor and is retried on the next sync — the
+moment HackerRank starts serving its source again, it is written and indexed
+with no further action. Older builds instead wrote a
+`// Could not fetch code snippet` placeholder and recorded it, which moved the
+cursor past the failure and stranded it forever.
+
+If a repository already contains such placeholders, use the repair tool in the
+top-level [`README.md`](../README.md#repairing-existing-solution-files).
+
 ## Notes
 
 - Sync only runs while the browser is open (that is the nature of an extension).
@@ -80,5 +97,13 @@ popup/               toolbar popup UI
 icons/               generated toolbar icons
 tools/gen_icons.py   toolbar icon generator
 tools/package.ps1    packaging script -> dist/relay-<version>.zip/.xpi
-tools/selftest.js    headless logic self-test (node tools/selftest.js)
+tools/selftest.js    headless logic self-test  (node tools/selftest.js)
+tools/synctest.js    end-to-end sync test against a stubbed HR + GitHub
+```
+
+Run both test suites before packaging:
+
+```bash
+node tools/selftest.js
+node tools/synctest.js
 ```

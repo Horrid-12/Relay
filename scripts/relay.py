@@ -60,6 +60,34 @@ def _problem_url(problem):
     return HACKERRANK_ROOT + p
 
 
+def build_submission_content(title, language, problem, author, code):
+    """Build the full text of one solution file, header comment included.
+
+    Single source of truth for both a normal sync (Relay.create_commit) and
+    scripts/repair.py, so a repaired file is byte-identical to a freshly
+    synced one. Mirrored by buildContent() in extension/background.js.
+    """
+    is_python = resolve_language(language)[1] == ".py"
+
+    if is_python:
+        content = "'''-----------------------------------------------------------------------\n"
+    else:
+        content = "/*-----------------------------------------------------------------------\n"
+
+    content += f"\nProblem Title: {title}"
+    content += f"\nProblem Link: {problem}"
+    content += f"\nAuthor: {author}"
+    content += f"\nLanguage: {language}"
+
+    if is_python:
+        content += "\n\n-----------------------------------------------------------------------'''\n\n"
+    else:
+        content += "\n\n-----------------------------------------------------------------------*/\n\n"
+
+    content += "\n" + code
+    return content
+
+
 def build_readme(submissions, repo_name):
     """Render README.md from the submissions index.
 
@@ -262,25 +290,10 @@ class Relay:
         file_name = sanitize_file_name(title)
         file_extension = resolve_language(language)[1]
 
-        if file_extension != ".py":
-            content = "/*-----------------------------------------------------------------------\n"
-        else:
-            content = "'''-----------------------------------------------------------------------\n"
-
         author = hackerrank_username or "HackerRank User"
-        content += f"\nProblem Title: {title}"
-        content += f"\nProblem Link: {link}"
-        content += f"\nAuthor: {author}"
-        content += f"\nLanguage: {language}"
+        content = build_submission_content(title, language, link, author, code)
 
-        if file_extension != ".py":
-            content += "\n\n-----------------------------------------------------------------------*/\n\n"
-        else:
-            content += "\n\n-----------------------------------------------------------------------'''\n\n"
-
-        content += "\n" + code
-
-        file_path = file_directory + file_name + file_extension
+        file_path = "submissions/" + file_name + file_extension
 
         try:
             message = "updated " + file_name
@@ -303,14 +316,46 @@ class Relay:
         return file_path
 
     def update_repo(self, submissions, codes):
-        logger.debug(f"Updating repo for {len(submissions)} new submission(s)…")
-        print(f"Updating repo for {len(submissions)} new submission(s)…")
-        i = 1
-        for submission in submissions:
+        """Commit each submission whose source was retrieved.
+
+        Returns the submissions actually written.
+
+        A submission whose code could not be fetched is excluded from that list,
+        so the caller never records it in the state file - which would move the
+        sync cursor past it and stop it being retried.
+
+        Note we commit every success, even one that sits below a failure.
+        Stopping at the first failure instead would look tidier but loses data:
+        fetch_new_submissions() halts at the first state entry, so anything
+        older than the newest commit is unreachable regardless. For
+        [C ok, B fails, A ok], committing only the prefix [C] strands B *and* A,
+        whereas committing [C, A] salvages A. A submission that is both older
+        than the cursor and failed is lost in either strategy; that is a
+        limitation of the single-cursor state format, not something this loop
+        can fix.
+        """
+        logger.debug(f"Updating repo for {len(submissions)} new submission(s).")
+        print(f"Updating repo for {len(submissions)} new submission(s).")
+        committed = []
+        skipped = 0
+        for i, submission in enumerate(submissions, 1):
+            code = codes.get(submission)
+            if code is None:
+                skipped += 1
+                logger.info(f" - skipping submission {i}. {submission[0]} (source unavailable)")
+                print(f" - SKIPPED submission {i}. {submission[0]}: source unavailable, "
+                      f"no file written, will retry next sync")
+                continue
             logger.info(f" - updating repo with submission {i}")
             print(f" - updating repo with submission {i}. {submission[0]}")
-            self.create_commit(submission, codes[submission])
-            i += 1
+            self.create_commit(submission, code)
+            committed.append(submission)
+
+        if skipped:
+            print(f"Skipped {skipped} submission(s) with no retrievable source; "
+                  f"they stay unrecorded so the next sync retries them.")
+        return committed
+
 
     def update_submissions(self, submissions):
         self.submissions = submissions + self.submissions
@@ -432,8 +477,12 @@ def relay(repo, user, cookie, token):
         new_submissions, codes = app.check_updates()
 
         if new_submissions is not None:
-            app.update_repo(new_submissions, codes)
-            app.update_submissions(new_submissions)
+            committed = app.update_repo(new_submissions, codes)
+            if committed:
+                app.update_submissions(committed)
+            else:
+                logger.info("No submissions could be committed; state file left unchanged.")
+                print("No submissions could be committed this run. State file left unchanged.")
         else:
             logger.info("No new submissions found!")
             print("No new submissions found! Nothing to update.")
