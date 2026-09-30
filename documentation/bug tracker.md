@@ -27,7 +27,7 @@
 - **Severity**: Low (cosmetic, but confusing for bug reports)
 - **Description**: The desktop GUI reported `v0.2` (`relay_gui.py:64` and `:100`), while the browser extension was at `0.4.0` (`extension/manifest.json:4`). There was no shared version constant and no CHANGELOG to explain the divergence.
 - **Impact**: Users and maintainers cannot tell which build is current, and bug reports citing a version are ambiguous.
-- **Required Fix**: ✅ Done at the 1.0.0 release. Unified on a single scheme: `relay_gui.py` now has one `VERSION` constant driving both the window title and the header label (so the two cannot drift), and `extension/manifest.json` carries the same `1.0.0`. `extension/tools/package.ps1` reads the version from the manifest, so the package filename follows automatically. The two files still have to be bumped together, but the GUI's internal duplication is gone.
+- **Required Fix**: ✅ Done at the 1.0.0 release. Unified on a single scheme: `relay_gui.py` now has one `VERSION` constant driving both the window title and the header label (so the two cannot drift), and `extension/manifest.json` carries the same `1.0.0`. `extension/tools/package.ps1` reads the version from the manifest, so the package filename follows automatically. The extension popup reads `runtime.getManifest().version` rather than hardcoding a badge. The two files still have to be bumped together, but the GUI's internal duplication is gone. `CHANGELOG.md` now also records what changed in each release, which this entry previously noted was missing.
 
 ### 5. A Failure Older Than the Newest Commit Is Never Retried
 - **Severity**: Medium (silent, one-off data loss)
