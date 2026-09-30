@@ -56,12 +56,17 @@ FG_DIM       = "#5a5a5a"
 BORDER       = "#3a3a3a"
 FONT_FAMILY  = "Inter"
 
+# ── Release version ──────────────────────────────────────────────────────
+# Single source of truth for the desktop build. Kept in lockstep with
+# extension/manifest.json, which drives the extension package filename.
+VERSION = "1.0.0"
+
 
 class RelayGUI:
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Relay v0.2")
+        self.root.title(f"Relay v{VERSION}")
         self.root.configure(bg=BG)
         self.root.resizable(False, False)
 
@@ -97,7 +102,7 @@ class RelayGUI:
         ).pack(side="left")
 
         tk.Label(
-            title_frame, text="v0.2", font=(FONT_FAMILY, 9),
+            title_frame, text=f"v{VERSION}", font=(FONT_FAMILY, 9),
             bg=BG, fg=FG_DIM
         ).pack(side="left", padx=(6, 0), pady=(5, 0))
 

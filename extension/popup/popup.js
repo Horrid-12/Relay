@@ -9,6 +9,15 @@ const logEl = document.getElementById("log");
 
 const DEFAULTS = { token: "", repo: "", cookie: "" };
 
+// Read the version from the manifest so the popup can never drift from the
+// packaged build. Only the leading two components are shown, to match the
+// short form used in the desktop app's title bar.
+try {
+  const full = api.runtime.getManifest().version || "";
+  const parts = full.split(".");
+  document.getElementById("version").textContent = "v" + parts.slice(0, 2).join(".");
+} catch (e) { /* keep the placeholder */ }
+
 function appendLog(line) {
   const row = document.createElement("div");
   row.textContent = line;

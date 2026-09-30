@@ -21,18 +21,19 @@
 - **Description**: The README previously told users to run the pre-built `dist/Relay.exe` directly. `dist/` and `build/` are both gitignored, so no executable exists in a fresh clone.
 - **Impact**: First-time users following the GUI section hit a missing-file error with no indication that they need to run `python build.py` first.
 - **Required Fix**: ✅ Fixed — the section now says no binary is committed and directs users to `python build.py`.
+- **Correction**: the claim that `dist/` is gitignored was wrong. `.gitignore` covered `build/` and `extension/dist/` but not the root `dist/`, so a locally built 27 MB `dist/Relay.exe` showed up as untracked and was one `git add .` away from being committed. Found while producing the 1.0.0 build; `dist/` is now ignored.
 
 ### 4. Version Numbers Are Inconsistent Across Interfaces
 - **Severity**: Low (cosmetic, but confusing for bug reports)
-- **Description**: The desktop GUI reports `v0.2` (`relay_gui.py:64` and `:100`), while the browser extension is at `0.4.0` (`extension/manifest.json:4`). There is no shared version constant and no CHANGELOG to explain the divergence.
+- **Description**: The desktop GUI reported `v0.2` (`relay_gui.py:64` and `:100`), while the browser extension was at `0.4.0` (`extension/manifest.json:4`). There was no shared version constant and no CHANGELOG to explain the divergence.
 - **Impact**: Users and maintainers cannot tell which build is current, and bug reports citing a version are ambiguous.
-- **Required Fix**: Pick a scheme. Either unify on a single version across GUI and extension, or keep them independent and label them separately (e.g. `Relay Desktop v0.2` / `Relay Extension v0.4.0`) so the distinction is explicit.
+- **Required Fix**: ✅ Done at the 1.0.0 release. Unified on a single scheme: `relay_gui.py` now has one `VERSION` constant driving both the window title and the header label (so the two cannot drift), and `extension/manifest.json` carries the same `1.0.0`. `extension/tools/package.ps1` reads the version from the manifest, so the package filename follows automatically. The two files still have to be bumped together, but the GUI's internal duplication is gone.
 
 ### 5. A Failure Older Than the Newest Commit Is Never Retried
 - **Severity**: Medium (silent, one-off data loss)
 - **Description**: `submissions.json` is a single newest-first list and both sync engines treat `state[0]` as the cursor: pagination halts the moment that link is reached. A submission whose source could not be fetched is now correctly left out of the index, so it stays *ahead* of the cursor and is retried — but only while newer submissions keep succeeding. If a newer submission commits successfully first, the cursor moves above the failure and the older failure becomes unreachable by any future sync.
 - **Impact**: For a batch like `[C ok, B fails, A ok]`, `B` is lost. `A` is still saved, because the code commits every retrievable submission rather than stopping at the first failure — stopping there would strand `A` as well and lose strictly more.
-- **Required Fix**: Needs a real change to the state format, e.g. a separate `pending` list of unretrievable submissions that sync drains independently of the main cursor. That alters the format shared by the CLI, GUI and extension, so it is deliberately out of scope here. Pinned by `extension/tools/synctest.js` scenario 4 and the matching Python case so the current trade-off is deliberate rather than accidental.
+- **Required Fix**: Needs a real change to the state format, e.g. a separate `pending` list of unretrievable submissions that sync drains independently of the main cursor. That alters the format shared by the CLI, GUI and extension, so it is deliberately out of scope for 1.0.0. Pinned by `extension/tools/synctest.js` scenario 4 and the matching Python case so the current trade-off is deliberate rather than accidental.
 - **Workaround**: `python -m scripts.repair --apply` re-fetches by submission id and is not subject to the cursor at all.
 
 ## Closed Bugs

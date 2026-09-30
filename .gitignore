@@ -19,6 +19,7 @@ venv/
 
 # Build & packaging artifacts
 build/
+dist/
 *.spec
 extension/dist/
 
