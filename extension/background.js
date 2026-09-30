@@ -177,17 +177,104 @@ async function fetchCode(cookie, submission, log) {
 }
 
 function extensionFor(language) {
-  const lang = String(language).toLowerCase();
-  if (lang.includes("c#") || lang.includes("csharp") || lang === "cs") return ".cs";
-  if (lang.includes("c++") || /^cpp/.test(lang)) return ".cpp";
-  if (lang.includes("java")) return ".java";
-  if (lang.includes("python") || lang.includes("pypy")) return ".py";
-  if (lang.includes("javascript") || lang === "js" || lang === "node") return ".js";
-  if (lang.includes("typescript") || lang === "ts") return ".ts";
-  if (lang === "go" || lang === "golang") return ".go";
-  if (lang.includes("ruby")) return ".rb";
-  if (lang.startsWith("c")) return ".c";
-  return "";
+  return resolveLanguage(language).ext;
+}
+
+function resolveLanguage(language) {
+  const lang = String(language == null ? "" : language).trim().toLowerCase();
+  const raw = String(language == null ? "" : language).trim();
+  if (lang.includes("c#") || lang.includes("csharp") || lang === "cs") return { display: "C#", ext: ".cs" };
+  if (lang.includes("c++") || /^cpp/.test(lang)) return { display: "C++", ext: ".cpp" };
+  if (lang.includes("java")) return { display: "Java", ext: ".java" };
+  if (lang.includes("python") || lang.includes("pypy")) return { display: "Python", ext: ".py" };
+  if (lang.includes("javascript") || lang === "js" || lang === "node") return { display: "JavaScript", ext: ".js" };
+  if (lang.includes("typescript") || lang === "ts") return { display: "TypeScript", ext: ".ts" };
+  if (lang === "go" || lang === "golang") return { display: "Go", ext: ".go" };
+  if (lang.includes("ruby")) return { display: "Ruby", ext: ".rb" };
+  if (lang.startsWith("c")) return { display: "C", ext: ".c" };
+  return { display: raw || "Other", ext: "" };
+}
+
+function sanitizeFileName(title) {
+  return String(title).replace(/[/\\]/g, "_");
+}
+
+function mdText(value) {
+  return String(value).replace(/\\/g, "\\\\").replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+}
+
+function mdLink(path) {
+  return `<${String(path).replace(/</g, "%3C").replace(/>/g, "%3E")}>`;
+}
+
+function problemUrl(problem) {
+  const p = String(problem == null ? "" : problem).trim();
+  if (!p) return "";
+  if (p.startsWith("http://") || p.startsWith("https://")) return p;
+  return `${HACKERRANK_ROOT}${p.startsWith("/") ? p : `/${p}`}`;
+}
+
+function compareKeys(a, b) {
+  const la = a.toLowerCase();
+  const lb = b.toLowerCase();
+  if (la < lb) return -1;
+  if (la > lb) return 1;
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+function buildReadme(state, repoName) {
+  // Must stay byte-for-byte identical to build_readme() in scripts/relay.py —
+  // otherwise the two clients overwrite each other's README on alternating syncs.
+  const lines = [
+    `# ${repoName}`,
+    "",
+    "Collection of Solutions to various HackerRank Problems.",
+    ""
+  ];
+
+  const groups = new Map();
+  const seen = new Set();
+  let total = 0;
+
+  for (const entry of state || []) {
+    if (!Array.isArray(entry) || entry.length < 3) continue;
+    const title = String(entry[0] == null ? "" : entry[0]);
+    const problem = String(entry[2] == null ? "" : entry[2]);
+    const { display, ext } = resolveLanguage(entry[1]);
+    const key = `${display}\u0000${title}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!groups.has(display)) groups.set(display, []);
+    groups.get(display).push({ title, problem, ext });
+    total += 1;
+  }
+
+  if (total === 0) {
+    lines.push("_No solutions synced yet._", "");
+    return lines.join("\n");
+  }
+
+  lines.push(
+    `**${total} ${total === 1 ? "solution" : "solutions"}** across **${groups.size} ${groups.size === 1 ? "language" : "languages"}**.`,
+    ""
+  );
+
+  for (const display of Array.from(groups.keys()).sort(compareKeys)) {
+    const rows = groups.get(display).sort((a, b) => compareKeys(a.title, b.title));
+    lines.push(`## ${display} (${rows.length})`, "");
+    for (const row of rows) {
+      let line = `- [${mdText(row.title)}](${mdLink(`submissions/${sanitizeFileName(row.title)}${row.ext}`)})`;
+      if (row.problem) {
+        line += ` — [HackerRank](${mdLink(problemUrl(row.problem))})`;
+      }
+      lines.push(line);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
 }
 
 function buildContent(submission, code, author) {
@@ -204,7 +291,7 @@ function buildContent(submission, code, author) {
 }
 
 function filePathFor(submission) {
-  const fileName = submission.title.replace(/[/\\]/g, "_");
+  const fileName = sanitizeFileName(submission.title);
   return `submissions/${fileName}${extensionFor(submission.language)}`;
 }
 
@@ -303,6 +390,47 @@ async function saveState(token, login, repo, state, log) {
   log("submissions.json index updated successfully");
 }
 
+async function saveReadme(token, login, repo, state, log) {
+  // Regenerates README.md on every sync, including no-op ones, so a
+  // hand-edited or deleted README self-heals.
+  const content = buildReadme(state, repo);
+  const path = encodePath([repo, "contents", "README.md"]);
+  const url = `${GITHUB_ROOT}/repos/${login}/${path}`;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const existing = await github(url, token);
+    const body = {
+      message: "updated README.md",
+      content: base64Encode(content)
+    };
+
+    if (existing.ok) {
+      const contents = await existing.json();
+      if (base64Decode(contents.content) === content) {
+        log("README.md already up to date.");
+        return;
+      }
+      body.sha = contents.sha;
+    } else if (existing.status === 404) {
+      body.message = "created README.md";
+    } else {
+      throw new Error(`Could not inspect README.md (${existing.status}).`);
+    }
+
+    const resp = await github(url, token, { method: "PUT", body: JSON.stringify(body) });
+    if (resp.ok) {
+      log("README.md updated successfully");
+      return;
+    }
+    if (resp.status === 409 && attempt < 3) {
+      log(`SHA conflict on README.md attempt ${attempt}, retrying...`);
+      await sleep(1000);
+      continue;
+    }
+    throw new Error(`Could not write README.md (${resp.status}).`);
+  }
+}
+
 async function uploadSubmission(token, login, repo, submission, code, author, log) {
   const filePath = filePathFor(submission);
   const url = `${GITHUB_ROOT}/repos/${login}/${encodePath([repo, "contents", ...filePath.split("/")])}`;
@@ -378,6 +506,7 @@ async function runSync(config, log) {
 
   if (!newSubs.length) {
     log("No new submissions found! Nothing to update.");
+    await saveReadme(token, login, repo.trim(), saved, log);
     return;
   }
 
@@ -398,7 +527,9 @@ async function runSync(config, log) {
   }
 
   const stateEntries = newSubs.map((s) => [s.title, s.language, s.problem, s.status, s.link]);
-  await saveState(token, login, repo.trim(), stateEntries.concat(saved), log);
+  const mergedState = stateEntries.concat(saved);
+  await saveState(token, login, repo.trim(), mergedState, log);
+  await saveReadme(token, login, repo.trim(), mergedState, log);
 }
 
 api.runtime.onConnect.addListener((port) => {

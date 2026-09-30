@@ -1,11 +1,133 @@
 from scripts.spider import Spider
 import json
 import pickle
+import time
 from github import Github, GithubException
 from datetime import datetime
 from scripts.config import logger
 import click
 import sys
+
+HACKERRANK_ROOT = "https://www.hackerrank.com"
+
+
+# ── Language / README helpers ─────────────────────────────────────────────
+
+def resolve_language(language):
+    """Map a HackerRank language string to (display name, file extension)."""
+    lang = str(language or "").strip().lower()
+    if "c#" in lang or "csharp" in lang or lang == "cs":
+        return "C#", ".cs"
+    if "c++" in lang or lang.startswith("cpp"):
+        return "C++", ".cpp"
+    if "java" in lang:
+        return "Java", ".java"
+    if "python" in lang or "pypy" in lang:
+        return "Python", ".py"
+    if "javascript" in lang or lang in ("js", "node"):
+        return "JavaScript", ".js"
+    if "typescript" in lang or lang == "ts":
+        return "TypeScript", ".ts"
+    if lang in ("go", "golang"):
+        return "Go", ".go"
+    if "ruby" in lang:
+        return "Ruby", ".rb"
+    if lang.startswith("c"):
+        return "C", ".c"
+    return (str(language or "").strip() or "Other"), ""
+
+
+def sanitize_file_name(title):
+    return str(title).replace("/", "_").replace("\\", "_")
+
+
+def _md_text(value):
+    return str(value).replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
+
+
+def _md_link(path):
+    return "<" + str(path).replace("<", "%3C").replace(">", "%3E") + ">"
+
+
+def _problem_url(problem):
+    p = str(problem or "").strip()
+    if not p:
+        return ""
+    if p.startswith("http://") or p.startswith("https://"):
+        return p
+    if not p.startswith("/"):
+        p = "/" + p
+    return HACKERRANK_ROOT + p
+
+
+def build_readme(submissions, repo_name):
+    """Render README.md from the submissions index.
+
+    Must stay byte-for-byte identical to buildReadme() in
+    extension/background.js — otherwise the two clients overwrite
+    each other's README on alternating syncs.
+    """
+    lines = [
+        "# " + str(repo_name),
+        "",
+        "Collection of Solutions to various HackerRank Problems.",
+        "",
+    ]
+
+    groups = {}
+    order = []
+    seen = set()
+    total = 0
+
+    for entry in submissions or []:
+        if not isinstance(entry, (list, tuple)) or len(entry) < 3:
+            continue
+        title = str(entry[0])
+        language = entry[1]
+        problem = str(entry[2] or "")
+        display, ext = resolve_language(language)
+        key = (display, title)
+        if key in seen:
+            continue
+        seen.add(key)
+        if display not in groups:
+            groups[display] = []
+            order.append(display)
+        groups[display].append((title, problem, ext))
+        total += 1
+
+    if total == 0:
+        lines.append("_No solutions synced yet._")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines.append(
+        "**{} {}** across **{} {}**.".format(
+            total,
+            "solution" if total == 1 else "solutions",
+            len(groups),
+            "language" if len(groups) == 1 else "languages",
+        )
+    )
+    lines.append("")
+
+    for display in sorted(order, key=lambda d: (d.lower(), d)):
+        rows = sorted(groups[display], key=lambda r: (r[0].lower(), r[0]))
+        lines.append("## {} ({})".format(display, len(rows)))
+        lines.append("")
+        for title, problem, ext in rows:
+            link = "- [{}]({})".format(
+                _md_text(title),
+                _md_link("submissions/" + sanitize_file_name(title) + ext),
+            )
+            if problem:
+                link += " — [HackerRank]({})".format(
+                    _md_link(_problem_url(problem))
+                )
+            lines.append(link)
+        lines.append("")
+
+    return "\n".join(lines)
 
 
 class Relay:
@@ -137,17 +259,8 @@ class Relay:
         language = submission[1]
         link = submission[2]
 
-        file_directory = "submissions/"
-        file_name = title.replace("/", "_").replace("\\", "_")
-        file_extension = ""
-
-        lang = language.lower()
-        if "c++" in lang or lang.startswith("cpp"):
-            file_extension = ".cpp"
-        elif "java" in lang:
-            file_extension = ".java"
-        elif "python" in lang or lang.startswith("pypy"):
-            file_extension = ".py"
+        file_name = sanitize_file_name(title)
+        file_extension = resolve_language(language)[1]
 
         if file_extension != ".py":
             content = "/*-----------------------------------------------------------------------\n"
@@ -200,7 +313,8 @@ class Relay:
             i += 1
 
     def update_submissions(self, submissions):
-        new_content = json.dumps(submissions + self.submissions)
+        self.submissions = submissions + self.submissions
+        new_content = json.dumps(self.submissions)
         max_retries = 3
         
         for attempt in range(1, max_retries + 1):
@@ -237,7 +351,6 @@ class Relay:
                 elif status == 409 and attempt < max_retries:
                     # Conflict — SHA is stale; retry with a fresh fetch
                     logger.warning(f"SHA conflict on attempt {attempt}, retrying…")
-                    import time
                     time.sleep(1)
                     continue
                 else:
@@ -247,6 +360,53 @@ class Relay:
             except Exception as e:
                 logger.exception(e)
                 print(f"[Error] Could not update submissions.json: {e}")
+                return
+
+    def update_readme(self):
+        """Regenerate README.md from the current index.
+
+        Runs on every sync, including no-op ones, so a hand-edited or
+        deleted README self-heals.
+        """
+        content = build_readme(self.submissions, submissions_repo)
+        max_retries = 3
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                c = self.repo.get_contents("README.md")
+                if c.decoded_content.decode('utf-8', errors='ignore') == content:
+                    logger.info("README.md already up to date.")
+                    print("README.md already up to date.")
+                    return
+                self.repo.update_file("README.md", "updated README.md", content, c.sha)
+                logger.info("README.md updated successfully")
+                print("README.md updated successfully")
+                return
+            except GithubException as e:
+                status = getattr(e, 'status', None)
+                if status == 404:
+                    try:
+                        self.repo.create_file(
+                            "README.md", "created README.md", content
+                        )
+                        logger.info("README.md created successfully")
+                        print("README.md created successfully")
+                        return
+                    except Exception as create_e:
+                        logger.exception(create_e)
+                        print(f"[Error] Could not create README.md: {create_e}")
+                        return
+                elif status == 409 and attempt < max_retries:
+                    logger.warning(f"SHA conflict on README.md attempt {attempt}, retrying…")
+                    time.sleep(1)
+                    continue
+                else:
+                    logger.exception(e)
+                    print(f"[Error] Could not update README.md ({status}): {e}")
+                    return
+            except Exception as e:
+                logger.exception(e)
+                print(f"[Error] Could not update README.md: {e}")
                 return
 
 
@@ -277,6 +437,8 @@ def relay(repo, user, cookie, token):
         else:
             logger.info("No new submissions found!")
             print("No new submissions found! Nothing to update.")
+
+        app.update_readme()
 
     except Exception as e:
         logger.error("[FATAL Error] Unable to relay submissions")

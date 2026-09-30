@@ -347,6 +347,8 @@ class RelayGUI:
             else:
                 self.log_queue.put("No new submissions found.")
 
+            app.update_readme()
+
             diff = (datetime.now() - start).seconds
             self.log_queue.put(f"Done in {diff // 60}m {diff % 60}s.")
 

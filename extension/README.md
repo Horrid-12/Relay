@@ -50,7 +50,11 @@ The extension will:
 - extract the accepted solutions from each submission page,
 - create the repository if needed and commit each solution under `submissions/`,
 - keep `submissions.json` in the repository as the sync state
-  (same format the desktop app uses, so the two can share a repo).
+  (same format the desktop app uses, so the two can share a repo),
+- regenerate `README.md` from that state on **every** sync, listing your
+  solutions grouped by language with links to each file. The generated
+  README is fully overwritten, so treat it as generated output — any
+  manual edits are reverted on the next sync.
 
 ## Notes
 

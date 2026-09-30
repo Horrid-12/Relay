@@ -11,6 +11,7 @@ Built on the original idea by [Sanket Gautam](https://github.com/sanketgautam/Ap
 - **Three Interfaces**: Use the native desktop GUI, the browser extension, or the command-line interface (CLI). All three share one `submissions.json` state format, so they can drive the same repository.
 - **Fast and Native API Auth**: Bypasses slow browser automation, parental control blocks, and Cloudflare challenges by calling the HackerRank REST API directly with your session cookie.
 - **Secure State Persistence**: Tracks synchronized submissions using standard `json` stored directly in your GitHub repository, replacing insecure legacy serialization.
+- **Auto-Generated README**: Rewrites your repo's `README.md` from the tracked state on every sync, with solutions grouped by language and linked to each file.
 - **Local Processing**: All code extraction and processing occurs locally on your machine without third-party network proxies.
 - **Standalone Binary**: Includes an automated build script to compile a portable Windows `.exe` application.
 
@@ -116,7 +117,7 @@ To allow Relay to create and update your solutions repository:
 
 ## Architecture Overview
 
-- **`scripts/relay.py`**: Core orchestrator managing GitHub API operations, repository creation, commit workflows, and submission state tracking (`submissions.json`).
+- **`scripts/relay.py`**: Core orchestrator managing GitHub API operations, repository creation, commit workflows, submission state tracking (`submissions.json`), and `README.md` generation.
 - **`scripts/spider.py`**: REST API automation layer that traverses HackerRank submissions, fetches JSON endpoints, and extracts actual code submissions locally.
 - **`relay_gui.py`**: Native desktop GUI built with Tkinter, featuring live log streaming and credential caching.
 - **`build.py`**: Automated PyInstaller packaging pipeline.
